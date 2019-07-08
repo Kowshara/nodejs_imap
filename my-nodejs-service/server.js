@@ -1,53 +1,69 @@
-const bodyParser = require('body-parser');
 const path = require(`path`);
-const express = require('express');
-const app = express();
-var Imap = require('imap'),
-    inspect = require('util').inspect;
+const Koa = require('koa');
+const Router = require('koa-router');
+const bodyParser = require('koa-bodyparser');
+const app = new Koa();
+const router = new Router();
 
+const Imap = require('imap'),
+    inspect = require('util').inspect;
+    
+/*
 var imap = new Imap({
-  user: 'exampleimap123@gmail.com',
-  password: 'BnF28vvZQ93kZR3',
-  host: 'imap.gmail.com',
+  user: ' ',
+  password: ' ',
+  host: ' ',
   port: 993,
   tls: true
 });
 
-function openInbox(cb) {
-  imap.openBox('INBOX', true, cb);
-}
-
-imap.once('ready', function() {
-  console.log('You did it!');
-});
-
-imap.once('error', function(err) {
-  console.log(err);
-});
 
 imap.once('end', function() {
   console.log('Connection ended');
 });
-
-imap.connect();
-
+*/
 
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}...`);
-});
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '/views/form.html'));
-});
-
-app.use(bodyParser.urlencoded({ extended: true }));
-
-app.post('/submit', (req, res) => {
-  console.log({
-    name: req.body.name,
-    message: req.body.message
+router.post('/api/check', async (ctx, next) => {
+  // ctx.request.body.email
+  /*
+  imap.user=ctx.request.header.login;
+  imap.password=ctx.request.header.password;
+  imap.host=ctx.request.header.host;*/
+  var imap = new Imap({
+    user: ctx.request.header.login,
+    password: ctx.request.header.password,
+    host: ctx.request.header.host,
+    port: 993,
+    tls: true
   });
-  res.send('Thanks for your message!');
+  const promise = new Promise((resolve, reject) => {
+    
+    function openInbox(cb) {
+      imap.openBox('INBOX', true, cb);
+    };
+
+    imap.once('ready', function() {
+      resolve("You connecte to mail");
+    });
+
+    imap.once('error', function(err) {
+      ctx.status=400;
+      resolve(err);
+    });
+
+    imap.connect();
+  
+  });
+
+  ctx.body = await promise;
+  await next();
 });
+
+app
+  .use(bodyParser())
+  .use(router.routes())
+  .use(router.allowedMethods());
+
+app.listen(8080);
